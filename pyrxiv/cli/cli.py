@@ -304,9 +304,14 @@ def download_pdfs(data_path):
 
     # Loops over all HDF5 files in the `data_path` and downloads the corresponding PDFs
     hdf5_files = list(data_path.glob("*.hdf5"))
-    for file in hdf5_files:
-        paper = ArxivPaper().from_hdf5(hdf_file=file)
-        pdf_path = downloader.download_pdf(arxiv_paper=paper)
+
+    with click.progressbar(
+        length=len(hdf5_files), label="Downloading papers PDFs"
+    ) as bar:
+        for file in hdf5_files:
+            paper = ArxivPaper().from_hdf5(hdf_file=file)
+            _ = downloader.download_pdf(arxiv_paper=paper)
+            bar.update(1)
 
     elapsed_time = time.time() - start_time
     click.echo(f"Downloaded arXiv papers in {elapsed_time:.2f} seconds\n\n")
