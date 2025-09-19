@@ -32,7 +32,7 @@ pyrxiv search_and_download --help
 
 For example:
 ```bash
-pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubbard" --n-papers 5
+pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubbard" --n-papers 5 --download-pdfs True
 ```
 
 ---
