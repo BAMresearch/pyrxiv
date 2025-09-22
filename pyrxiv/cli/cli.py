@@ -243,7 +243,7 @@ def cli():
 @click.option(
     "--download-pdfs",
     "-dp",
-    type=bool,
+    is_flag=True,
     default=False,
     required=False,
     help="""
@@ -299,19 +299,29 @@ def download_pdfs(data_path):
     # check if `data_path` exists, and if not, returns an error
     data_path = Path(data_path)
     if not data_path.exists():
-        raise ValueError(f"The specified path {data_path} does not exist.")
+        raise click.ClickException(f"The specified path {data_path} does not exist.")
     downloader = ArxivDownloader(download_path=data_path, logger=logger)
 
     # Loops over all HDF5 files in the `data_path` and downloads the corresponding PDFs
     hdf5_files = list(data_path.glob("*.hdf5"))
 
+    failed_downloads = []
     with click.progressbar(
         length=len(hdf5_files), label="Downloading papers PDFs"
     ) as bar:
         for file in hdf5_files:
             paper = ArxivPaper.from_hdf5(file=file)
-            _ = downloader.download_pdf(arxiv_paper=paper)
+            try:
+                _ = downloader.download_pdf(arxiv_paper=paper)
+            except Exception as e:
+                failed_downloads.append(str(file))
+                logger.error(f"Failed to download PDF for {file}: {e}")
             bar.update(1)
 
     elapsed_time = time.time() - start_time
     click.echo(f"Downloaded arXiv papers in {elapsed_time:.2f} seconds\n\n")
+
+    if failed_downloads:
+        click.echo("\nFailed to download PDFs for the following files:")
+        for failed_file in failed_downloads:
+            click.echo(f"  - {failed_file}")
