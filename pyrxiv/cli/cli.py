@@ -131,7 +131,8 @@ def run_search_and_download(
 
                 # Save the paper metadata to an HDF5 file
                 hdf_path = download_path / f"{paper.id}.hdf5"
-                save_paper_to_hdf5(paper=paper, pdf_path=pdf_path, hdf_path=hdf_path)
+                with h5py.File(hdf_path, "a") as h5f:
+                    _ = paper.to_hdf5(hdf_file=h5f)
 
                 # Deleting the PDF file after storing it in HDF5
                 if not download_pdfs:
