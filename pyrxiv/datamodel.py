@@ -112,6 +112,16 @@ class ArxivPaper(BaseModel):
 
     @classmethod
     def from_hdf5(cls, file: Path) -> "ArxivPaper":
+        """
+        Loads the ArxivPaper metadata and text dataset from an HDF5 file and returns an instance of ArxivPaper
+        filled with the data.
+
+        Args:
+            file (Path): The path to the HDF5 file.
+
+        Returns:
+            ArxivPaper: An instance of ArxivPaper filled with the data from the HDF5 file.
+        """
         with h5py.File(file, "r") as h5f:
             paper_id = file.stem
             group = h5f[paper_id]["arxiv_paper"]
