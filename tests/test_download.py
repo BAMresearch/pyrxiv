@@ -16,7 +16,7 @@ class TestArxivDownloader:
                 1,
                 {
                     "level": "error",
-                    "event": "Failed to download PDF: 404 Client Error: Not Found for url: http://arxiv.org/pdf/1234.5678v1",
+                    "event": "Failed to download PDF: 404 Client Error: Not Found for url: https://arxiv.org/pdf/1234.5678v1",
                 },
             ),
             (
