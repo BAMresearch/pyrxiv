@@ -309,7 +309,7 @@ def download_pdfs(data_path):
         length=len(hdf5_files), label="Downloading papers PDFs"
     ) as bar:
         for file in hdf5_files:
-            paper = ArxivPaper().from_hdf5(hdf_file=file)
+            paper = ArxivPaper.from_hdf5(file=file)
             _ = downloader.download_pdf(arxiv_paper=paper)
             bar.update(1)
 

@@ -1,4 +1,5 @@
 import datetime
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -109,40 +110,36 @@ class ArxivPaper(BaseModel):
             sub_group.attrs[key] = value
         return group
 
-    def from_hdf5(self, hdf_file: h5py.File) -> "ArxivPaper":
-        """
-        Loads the ArxivPaper metadata and text dataset from an HDF5 file.
-
-        Args:
-            hdf_file (h5py.File): The HDF5 file to load the metadata and text from.
-
-        Returns:
-            ArxivPaper: The ArxivPaper object with the loaded metadata and text.
-        """
-        group = hdf_file[self.id]["arxiv_paper"]
-        data = {}
-        for key in self.model_fields:
-            if key == "id":
-                data[key] = self.id
-                continue
-            if key in ["updated", "published"]:
-                value = group.attrs.get(key, None)
-                data[key] = datetime.datetime.fromisoformat(value) if value else None
-                continue
-            if key == "authors":
-                authors = group.get("authors", [])
-                data[key] = [Author(name=author.decode("utf-8")) for author in authors]
-                continue
-            if key == "text":
-                text_data = group.get("text", b"")
-                data[key] = text_data[()].decode("utf-8") if text_data else ""
-                continue
-            # handle lists of strings
-            if key in group and isinstance(group[key], h5py.Dataset):
-                value = group[key][()]
-                if isinstance(value, np.ndarray) and value.dtype.kind == "S":
-                    data[key] = [item.decode("utf-8") for item in value]
+    @classmethod
+    def from_hdf5(cls, file: Path) -> "ArxivPaper":
+        with h5py.File(file, "r") as h5f:
+            paper_id = file.stem
+            group = h5f[paper_id]["arxiv_paper"]
+            data = {}
+            for key in cls.model_fields:
+                if key == "id":
+                    data[key] = paper_id
                     continue
-            # all other attributes
-            data[key] = group.attrs.get(key, None)
-        return ArxivPaper(**data)
+                if key in ["updated", "published"]:
+                    value = group.attrs.get(key, None)
+                    data[key] = (
+                        datetime.datetime.fromisoformat(value) if value else None
+                    )
+                    continue
+                if key == "authors":
+                    authors = group.get("authors", [])
+                    data[key] = [
+                        Author(name=author.decode("utf-8")) for author in authors
+                    ]
+                    continue
+                if key == "text":
+                    text_data = group.get("text", b"")
+                    data[key] = text_data[()].decode("utf-8") if text_data else ""
+                    continue
+                if key in group and isinstance(group[key], h5py.Dataset):
+                    value = group[key][()]
+                    if isinstance(value, np.ndarray):
+                        data[key] = [item.decode("utf-8") for item in value]
+                        continue
+                data[key] = group.attrs.get(key, None)
+            return cls(**data)
