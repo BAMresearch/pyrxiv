@@ -1,11 +1,69 @@
 import re
 import urllib.request
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from structlog._config import BoundLoggerLazyProxy
 
 import xmltodict
 
 from pyrxiv.datamodel import ArxivPaper, Author
 from pyrxiv.logger import logger
+
+
+def get_batch_response(
+    category: str = "cond-mat.str-el",
+    start_index: int = 0,
+    max_results: int = 100,
+    recursion: bool = True,
+    logger: "BoundLoggerLazyProxy" = logger,
+) -> list | dict:
+    """
+    Fetch a batch of papers from arXiv API based on the specified category, start index, and maximum results.
+
+    NOTE: This function is happening because of a weird behavior of the arXiv API when `max_results` is hitting no response
+    at random `max_results`. If the response does not have entries, we re-try again with a slightly different number
+    for `max_results`.
+
+    Args:
+        category (str, optional): The arXiv category to fetch papers from. Defaults to "cond-mat.str-el".
+        start_index (int, optional): The starting index for fetching papers. Defaults to 0.
+        max_results (int, optional): The maximum number of results to fetch. Defaults to 100.
+        recursion (bool, optional): Whether to allow recursion for retrying with a different `max_results`. Defaults to True.
+        logger (BoundLoggerLazyProxy, optional): The logger to log messages.
+
+    Returns:
+        list | dict: A list of papers metadata fetched from arXiv. If `max_results` is 1, the batch will be a single dictionary.
+    """
+    url = (
+        f"http://export.arxiv.org/api/query?"
+        f"search_query=cat:{category}&start={start_index}&max_results={max_results}&"
+        f"sortBy=submittedDate&sortOrder=descending"
+    )
+    try:
+        request = urllib.request.urlopen(url)
+    except Exception as e:
+        logger.error(f"Error fetching data from arXiv API: {e}")
+        return []
+    data = request.read().decode("utf-8")
+    data_dict = xmltodict.parse(data)
+
+    # Extracting papers from the XML response
+    batch = data_dict.get("feed", {}).get("entry", [])
+    if not batch and recursion:
+        # try again with a different `max_results`
+        DECREMENT_FOR_RETRY = 49  # Used to avoid repeated empty batches
+        new_max_results = max(1, max_results - DECREMENT_FOR_RETRY)
+        batch = get_batch_response(
+            category=category,
+            start_index=start_index,
+            max_results=new_max_results,
+            recursion=False,
+        )
+        if not batch:
+            logger.info("No papers found in the response")
+    return batch
 
 
 class ArxivFetcher:
@@ -166,21 +224,17 @@ class ArxivFetcher:
             len(papers) < self.max_results
             and (len(papers) + n_pattern_papers) < n_papers
         ):
-            remaining = self.max_results - len(papers)  # remaining papers to fetch
-            current_batch_size = min(self.max_results, remaining)
+            # ! commented out due to a bug in the arXiv API
+            # remaining = self.max_results - len(papers)  # remaining papers to fetch
+            # current_batch_size = min(self.max_results, remaining)
 
-            url = (
-                f"http://export.arxiv.org/api/query?"
-                f"search_query=cat:{self.category}&start={self.start_index}&max_results={current_batch_size}&"
-                f"sortBy=submittedDate&sortOrder=descending"
+            # Fetch a batch of papers from arXiv
+            batch = get_batch_response(
+                category=self.category,
+                start_index=self.start_index,
+                max_results=self.max_results,
+                logger=self.logger,
             )
-
-            request = urllib.request.urlopen(url)
-            data = request.read().decode("utf-8")
-            data_dict = xmltodict.parse(data)
-
-            # Extracting papers from the XML response
-            batch = data_dict.get("feed", {}).get("entry", [])
             if not batch:
                 self.logger.info("No papers found in the response")
                 return []
