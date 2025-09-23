@@ -18,7 +18,7 @@ def get_batch_response(
     max_results: int = 100,
     recursion: bool = True,
     logger: "BoundLoggerLazyProxy" = logger,
-) -> list | int:
+) -> list | dict:
     """
     Fetch a batch of papers from arXiv API based on the specified category, start index, and maximum results.
 
@@ -34,14 +34,18 @@ def get_batch_response(
         logger (BoundLoggerLazyProxy, optional): The logger to log messages.
 
     Returns:
-        list | int: A list of papers metadata fetched from arXiv. If `max_results` is 1, the batch will be a single dictionary.
+        list | dict: A list of papers metadata fetched from arXiv. If `max_results` is 1, the batch will be a single dictionary.
     """
     url = (
         f"http://export.arxiv.org/api/query?"
         f"search_query=cat:{category}&start={start_index}&max_results={max_results}&"
         f"sortBy=submittedDate&sortOrder=descending"
     )
-    request = urllib.request.urlopen(url)
+    try:
+        request = urllib.request.urlopen(url)
+    except Exception as e:
+        logger.error(f"Error fetching data from arXiv API: {e}")
+        return []
     data = request.read().decode("utf-8")
     data_dict = xmltodict.parse(data)
 
@@ -49,10 +53,12 @@ def get_batch_response(
     batch = data_dict.get("feed", {}).get("entry", [])
     if not batch and recursion:
         # try again with a different `max_results`
+        DECREMENT_FOR_RETRY = 49  # Used to avoid repeated empty batches
+        new_max_results = max(1, max_results - DECREMENT_FOR_RETRY)
         batch = get_batch_response(
             category=category,
             start_index=start_index,
-            max_results=max_results - 49,
+            max_results=new_max_results,
             recursion=False,
         )
         if not batch:
