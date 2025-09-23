@@ -98,6 +98,8 @@ class ArxivPaper(BaseModel):
             if key == "text":
                 if key in sub_group:
                     del sub_group[key]
+                # VLEN encoding does not accept \x00 chars
+                value = value.replace("\x00", "")
                 sub_group.create_dataset(key, data=value.encode("utf-8"))
                 continue
             # handle lists of strings
