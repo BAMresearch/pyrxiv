@@ -56,7 +56,7 @@ def get_batch_response(
             recursion=False,
         )
         if not batch:
-            logger.warning("No papers found in the response")
+            logger.info("No papers found in the response")
     return batch
 
 
