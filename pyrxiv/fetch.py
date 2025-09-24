@@ -1,3 +1,4 @@
+import random
 import re
 import urllib.request
 from pathlib import Path
@@ -16,26 +17,34 @@ def get_batch_response(
     category: str = "cond-mat.str-el",
     start_index: int = 0,
     max_results: int = 100,
-    recursion: bool = True,
+    iteration: int = 0,
+    max_iteration: int = 10,
     logger: "BoundLoggerLazyProxy" = logger,
 ) -> list | dict:
     """
     Fetch a batch of papers from arXiv API based on the specified category, start index, and maximum results.
 
     NOTE: This function is happening because of a weird behavior of the arXiv API when `max_results` is hitting no response
-    at random `max_results`. If the response does not have entries, we re-try again with a slightly different number
-    for `max_results`.
+    at random `max_results`. If the response does not have entries, we re-try again recursively with a different number
+    for `max_results` until a maximum number of iterations is reached (defined by `max_iteration`).
 
     Args:
         category (str, optional): The arXiv category to fetch papers from. Defaults to "cond-mat.str-el".
         start_index (int, optional): The starting index for fetching papers. Defaults to 0.
         max_results (int, optional): The maximum number of results to fetch. Defaults to 100.
-        recursion (bool, optional): Whether to allow recursion for retrying with a different `max_results`. Defaults to True.
+        iteration (int, optional): The current iteration count for recursive attempts. Defaults to 0.
+        max_iteration (int, optional): The maximum number of recursive attempts to fetch papers if no results are found. Defaults to 10.
         logger (BoundLoggerLazyProxy, optional): The logger to log messages.
 
     Returns:
         list | dict: A list of papers metadata fetched from arXiv. If `max_results` is 1, the batch will be a single dictionary.
     """
+    # Recursion safeguard
+    if iteration >= max_iteration:
+        logger.warning("Maximum recursion depth reached. Returning empty batch.")
+        return []
+
+    # Request from arXiv API
     url = (
         f"http://export.arxiv.org/api/query?"
         f"search_query=cat:{category}&start={start_index}&max_results={max_results}&"
@@ -51,15 +60,18 @@ def get_batch_response(
 
     # Extracting papers from the XML response
     batch = data_dict.get("feed", {}).get("entry", [])
-    if not batch and recursion:
+
+    # Recursively trying to resolve batches
+    if not batch and max_results > 1:
         # try again with a different `max_results`
-        DECREMENT_FOR_RETRY = 49  # Used to avoid repeated empty batches
-        new_max_results = max(1, max_results - DECREMENT_FOR_RETRY)
+        new_max_results = random.randint(1, max_results - 1)  # 1 <= value < max_results
+        iteration += 1
         batch = get_batch_response(
             category=category,
             start_index=start_index,
             max_results=new_max_results,
-            recursion=False,
+            iteration=iteration,
+            max_iteration=max_iteration,
         )
         if not batch:
             logger.info("No papers found in the response")
@@ -243,6 +255,7 @@ class ArxivFetcher:
                 batch = [batch]
 
             # Store papers object ArxivPaper in a list
+            print(batch[-1], self.start_index)
             initial_len = len(papers)
             for new_paper in batch:
                 # If there is an error in the fetching, skip the paper

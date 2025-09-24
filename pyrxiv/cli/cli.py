@@ -106,8 +106,13 @@ def run_search_and_download(
                 n_pattern_papers=len(pattern_papers),
             )
             for paper in papers:
-                pdf_path = downloader.download_pdf(arxiv_paper=paper)
-                text = extractor.get_text(pdf_path=pdf_path, loader=loader)
+                try:
+                    pdf_path = downloader.download_pdf(arxiv_paper=paper)
+                    text = extractor.get_text(pdf_path=pdf_path, loader=loader)
+                except Exception as e:
+                    logger.error(f"Error processing paper {paper.id}: {e}")
+                    continue
+
                 if not text:
                     logger.info("No text extracted from the PDF.")
                     continue
