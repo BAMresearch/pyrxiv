@@ -1,3 +1,4 @@
+import random
 import re
 import urllib.request
 from pathlib import Path
@@ -53,13 +54,12 @@ def get_batch_response(
     batch = data_dict.get("feed", {}).get("entry", [])
     if not batch and recursion:
         # try again with a different `max_results`
-        DECREMENT_FOR_RETRY = 49  # Used to avoid repeated empty batches
-        new_max_results = max(1, max_results - DECREMENT_FOR_RETRY)
+        new_max_results = random.randrange(max_results)  # 0 <= value < max_results
         batch = get_batch_response(
             category=category,
             start_index=start_index,
             max_results=new_max_results,
-            recursion=False,
+            recursion=True,
         )
         if not batch:
             logger.info("No papers found in the response")
