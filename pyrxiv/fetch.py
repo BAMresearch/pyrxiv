@@ -255,7 +255,6 @@ class ArxivFetcher:
                 batch = [batch]
 
             # Store papers object ArxivPaper in a list
-            print(batch[-1], self.start_index)
             initial_len = len(papers)
             for new_paper in batch:
                 # If there is an error in the fetching, skip the paper
