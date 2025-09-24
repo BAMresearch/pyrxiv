@@ -18,7 +18,7 @@ def get_batch_response(
     start_index: int = 0,
     max_results: int = 100,
     iteration: int = 0,
-    max_recursion: int = 10,
+    max__iteration: int = 10,
     logger: "BoundLoggerLazyProxy" = logger,
 ) -> list | dict:
     """
@@ -33,14 +33,14 @@ def get_batch_response(
         start_index (int, optional): The starting index for fetching papers. Defaults to 0.
         max_results (int, optional): The maximum number of results to fetch. Defaults to 100.
         iteration (int, optional): The current iteration count for recursive attempts. Defaults to 0.
-        max_recursion (int, optional): The maximum number of recursive attempts to fetch papers if no results are found. Defaults to 10.
+        max__iteration (int, optional): The maximum number of recursive attempts to fetch papers if no results are found. Defaults to 10.
         logger (BoundLoggerLazyProxy, optional): The logger to log messages.
 
     Returns:
         list | dict: A list of papers metadata fetched from arXiv. If `max_results` is 1, the batch will be a single dictionary.
     """
     # Recursion safeguard
-    if iteration >= max_recursion:
+    if iteration >= max__iteration:
         logger.warning("Maximum recursion depth reached. Returning empty batch.")
         return []
 
@@ -71,7 +71,7 @@ def get_batch_response(
             start_index=start_index,
             max_results=new_max_results,
             iteration=iteration,
-            max_recursion=max_recursion,
+            max__iteration=max__iteration,
         )
         if not batch:
             logger.info("No papers found in the response")
