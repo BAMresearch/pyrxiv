@@ -17,7 +17,8 @@ def get_batch_response(
     category: str = "cond-mat.str-el",
     start_index: int = 0,
     max_results: int = 100,
-    recursion: bool = True,
+    iteration: int = 0,
+    max_recursion: int = 10,
     logger: "BoundLoggerLazyProxy" = logger,
 ) -> list | dict:
     """
@@ -31,12 +32,19 @@ def get_batch_response(
         category (str, optional): The arXiv category to fetch papers from. Defaults to "cond-mat.str-el".
         start_index (int, optional): The starting index for fetching papers. Defaults to 0.
         max_results (int, optional): The maximum number of results to fetch. Defaults to 100.
-        recursion (bool, optional): Whether to allow recursion for retrying with a different `max_results`. Defaults to True.
+        iteration (int, optional): The current iteration count for recursive attempts. Defaults to 0.
+        max_recursion (int, optional): The maximum number of recursive attempts to fetch papers if no results are found. Defaults to 10.
         logger (BoundLoggerLazyProxy, optional): The logger to log messages.
 
     Returns:
         list | dict: A list of papers metadata fetched from arXiv. If `max_results` is 1, the batch will be a single dictionary.
     """
+    # Recursion safeguard
+    if iteration >= max_recursion:
+        logger.warning("Maximum recursion depth reached. Returning empty batch.")
+        return []
+
+    # Request from arXiv API
     url = (
         f"http://export.arxiv.org/api/query?"
         f"search_query=cat:{category}&start={start_index}&max_results={max_results}&"
@@ -52,14 +60,18 @@ def get_batch_response(
 
     # Extracting papers from the XML response
     batch = data_dict.get("feed", {}).get("entry", [])
-    if not batch and recursion:
+
+    # Recursively trying to resolve batches
+    if not batch:
         # try again with a different `max_results`
         new_max_results = random.randrange(max_results)  # 0 <= value < max_results
+        iteration += 1
         batch = get_batch_response(
             category=category,
             start_index=start_index,
             max_results=new_max_results,
-            recursion=True,
+            iteration=iteration,
+            max_recursion=max_recursion,
         )
         if not batch:
             logger.info("No papers found in the response")
