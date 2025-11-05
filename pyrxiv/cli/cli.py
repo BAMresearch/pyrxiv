@@ -375,11 +375,8 @@ def download_pdfs(data_path, arxiv_ids):
             papers_to_download.append((arxiv_id, paper))
         
         label = "Downloading PDFs from arXiv IDs"
-    else:
+    elif data_path.exists():
         # Use HDF5 files from the data path
-        if not data_path.exists():
-            raise click.ClickException(f"The specified path {data_path} does not exist.")
-        
         hdf5_files = list(data_path.glob("*.hdf5"))
         if not hdf5_files:
             raise click.ClickException(f"No HDF5 files found in {data_path}.")
@@ -392,6 +389,11 @@ def download_pdfs(data_path, arxiv_ids):
                 logger.error(f"Failed to load HDF5 file {file}: {e}")
         
         label = "Downloading PDFs from HDF5 files"
+    else:
+        raise click.ClickException(
+            f"No arXiv IDs provided and data path {data_path} does not exist. "
+            "Please provide --arxiv-ids or ensure --data-path points to a valid directory with HDF5 files."
+        )
 
     failed_downloads = []
     with click.progressbar(
