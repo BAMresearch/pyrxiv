@@ -42,21 +42,21 @@ def run_search_and_download(
     start_from_filepath: bool = False,
     loader: str = "pdfminer",
     clean_text: bool = True,
-    download_pdfs: bool = False,
+    save_hdf5: bool = False,
 ) -> tuple[list[Path], list["ArxivPaper"]]:
     """
     Searches for a specific number of papers `n_papers` in arXiv for a specified `category` and downloads
-    their metadata in an HDF5 file in `download_path`.
+    their PDFs in `download_path`. Optionally, metadata can be saved to HDF5 files.
 
     If `regex_pattern` is specified, only the papers that contain the pattern will be downloaded.
     If `start_id` is specified, the search will start from that ID.
     If `start_from_filepath` is True, the search will start from the last downloaded paper's ID.
     If `loader` is specified, the text will be extracted using the corresponding loader.
     If `clean_text` is True, the extracted text will be cleaned by removing references and unnecessary whitespaces.
-    If `download_pdfs` is True, the PDFs will be downloaded and saved in `download_path`.
+    If `save_hdf5` is True, the metadata will be saved to HDF5 files in `download_path`.
 
     Args:
-        download_path (Path, optional): The path for downloading the arXiv metadata. Defaults to Path("data").
+        download_path (Path, optional): The path for downloading the arXiv PDFs. Defaults to Path("data").
         category (str, optional): The arXiv category on which the papers will be searched. Defaults to "cond-mat.str-el".
         n_papers (int, optional): The number of arXiv papers to be fetched and downloaded.
             If `regex_pattern` is not specified, this would correspond to the n_papers starting from the newest in the `category`. Defaults to 5.
@@ -69,7 +69,7 @@ def run_search_and_download(
             Defaults to "pdfminer". Available loaders: "pdfminer", "pypdf".
         clean_text (bool, optional): If True, the extracted text will be cleaned by removing references and unnecessary whitespaces.
             Defaults to True.
-        download_pdfs (bool, optional): If True, the PDFs will be downloaded and saved in `download_path`. Defaults to False.
+        save_hdf5 (bool, optional): If True, the metadata will be saved to HDF5 files in `download_path`. Defaults to False.
 
     Returns:
         tuple[list[Path], list[ArxivPaper]]: A tuple containing a list of Paths to the arXiv papers and a list of ArxivPaper objects
@@ -127,24 +127,21 @@ def run_search_and_download(
                     continue
                 logger.info(
                     f"Paper {paper.id} matches the regex pattern: {regex_pattern}."
-                    " Storing metadata and text in an HDF5 file."
+                    " Keeping PDF file."
                 )
 
                 # If the paper matches the regex_pattern, store text in the corresponding ArxivPaper object
                 paper.text = text
                 paper.pdf_loader = loader
 
-                # Save the paper metadata to an HDF5 file
-                hdf_path = download_path / f"{paper.id}.hdf5"
-                with h5py.File(hdf_path, "a") as h5f:
-                    _ = paper.to_hdf5(hdf_file=h5f)
+                # Optionally save the paper metadata to an HDF5 file
+                if save_hdf5:
+                    hdf_path = download_path / f"{paper.id}.hdf5"
+                    with h5py.File(hdf_path, "a") as h5f:
+                        _ = paper.to_hdf5(hdf_file=h5f)
 
-                # Deleting the PDF file after storing it in HDF5
-                if not download_pdfs:
-                    pdf_path.unlink()
-
-                # Appending the HDF5 file and paper to the lists
-                pattern_files.append(hdf_path)
+                # Appending the PDF file and paper to the lists
+                pattern_files.append(pdf_path)
                 pattern_papers.append(paper)
                 bar.update(1)
 
@@ -169,7 +166,7 @@ def cli():
     default="data",
     required=False,
     help="""
-    (Optional) The path for downloading the arXiv metadata in HDF5 files and, optionally (if set with download-pdfs), the PDFs. Defaults to "data".
+    (Optional) The path for downloading the arXiv PDFs and, optionally (if set with save-hdf5), the HDF5 metadata files. Defaults to "data".
     """,
 )
 @click.option(
@@ -247,13 +244,13 @@ def cli():
     """,
 )
 @click.option(
-    "--download-pdfs",
-    "-dp",
+    "--save-hdf5",
+    "-hdf5",
     is_flag=True,
     default=False,
     required=False,
     help="""
-    (Optional) If True, the PDFs will be downloaded and saved in `download_path`. Defaults to False.
+    (Optional) If True, the metadata will be saved to HDF5 files in `download_path`. Defaults to False.
     """,
 )
 def search_and_download(
@@ -265,7 +262,7 @@ def search_and_download(
     start_from_filepath,
     loader,
     clean_text,
-    download_pdfs,
+    save_hdf5,
 ):
     start_time = time.time()
 
@@ -278,7 +275,7 @@ def search_and_download(
         start_from_filepath=start_from_filepath,
         loader=loader,
         clean_text=clean_text,
-        download_pdfs=download_pdfs,
+        save_hdf5=save_hdf5,
     )
 
     elapsed_time = time.time() - start_time
