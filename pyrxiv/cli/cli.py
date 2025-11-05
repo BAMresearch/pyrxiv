@@ -166,7 +166,7 @@ def cli():
     default="data",
     required=False,
     help="""
-    (Optional) The path for downloading the arXiv PDFs and, optionally (if set with save-hdf5), the HDF5 metadata files. Defaults to "data".
+    (Optional) The path for downloading the arXiv PDFs and, optionally (if set with --save-hdf5), the HDF5 metadata files. Defaults to "data".
     """,
 )
 @click.option(
@@ -245,7 +245,7 @@ def cli():
 )
 @click.option(
     "--save-hdf5",
-    "-hdf5",
+    "-h5",
     is_flag=True,
     default=False,
     required=False,
