@@ -42,6 +42,10 @@ pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubb
 
 **Note**: When using `--regex-pattern`, the tool will continue fetching papers from arXiv until it finds the specified number of papers (`--n-papers`) that match the pattern. Papers that don't match the regex are automatically discarded.
 
+## Documentation
+
+For a comprehensive guide on how to use the CLI and recommended pipelines, see the [How to Use pyrxiv](docs/how_to_use_pyrxiv.md) documentation.
+
 ---
 
 # Development
