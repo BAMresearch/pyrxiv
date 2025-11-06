@@ -71,7 +71,7 @@ pyrxiv search_and_download --category physics.optics --n-papers 10
 
 #### Filtering with Regex Patterns
 
-Download papers whose text contain a specific matched regex pattern. When using `--regex-pattern`, pyrxiv will continue fetching papers until it finds the specified number that match the pattern:
+Download papers whose text contains a specific matched regex pattern. When using `--regex-pattern`, pyrxiv will continue fetching papers until it finds the specified number that match the pattern:
 
 ```bash
 pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubbard" --n-papers 5
