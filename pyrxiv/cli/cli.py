@@ -324,7 +324,7 @@ def download_pdfs(data_path):
     downloader = ArxivDownloader(download_path=data_path, logger=logger)
 
     # Loops over all HDF5 files in the `data_path` and downloads the corresponding PDFs
-    papers_to_download = []
+    papers_to_download = {}
     # Use HDF5 files from the data path
     hdf5_files = list(data_path.glob("*.hdf5"))
     if not hdf5_files:
@@ -333,7 +333,7 @@ def download_pdfs(data_path):
     for file in hdf5_files:
         try:
             paper = ArxivPaper.from_hdf5(file=file)
-            papers_to_download.append((str(file), paper))
+            papers_to_download[str(file)] = paper
         except Exception as e:
             logger.error(f"Failed to load HDF5 file {file}: {e}")
 
@@ -341,7 +341,7 @@ def download_pdfs(data_path):
     with click.progressbar(
         length=len(papers_to_download), label="Downloading PDFs from HDF5 files"
     ) as bar:
-        for identifier, paper in papers_to_download:
+        for identifier, paper in papers_to_download.items():
             try:
                 _ = downloader.download_pdf(arxiv_paper=paper)
             except Exception as e:
