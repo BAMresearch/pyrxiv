@@ -13,26 +13,6 @@ from pyrxiv.fetch import ArxivFetcher
 from pyrxiv.logger import logger
 
 
-def save_paper_to_hdf5(paper: "ArxivPaper", pdf_path: Path, hdf_path: Path) -> None:
-    """
-    Saves the arXiv paper metadata to an HDF5 file.
-
-    Args:
-        paper (ArxivPaper): The arXiv paper object containing metadata.
-        pdf_path (Path): The path to the PDF file of the arXiv paper.
-        hdf_path (Path): The path to the HDF5 file where the metadata will be saved.
-    """
-    with h5py.File(hdf_path, "a") as h5f:
-        group = paper.to_hdf5(hdf_file=h5f)
-        # Store PDF in the HDF5 file
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-        # overwrite existing dataset
-        if "pdf" in group:
-            del group["pdf"]
-        group.create_dataset("pdf", data=np.void(pdf_bytes))
-
-
 def run_search_and_download(
     download_path: Path = Path("data"),
     category: str = "cond-mat.str-el",
@@ -42,21 +22,25 @@ def run_search_and_download(
     start_from_filepath: bool = False,
     loader: str = "pdfminer",
     clean_text: bool = True,
-    download_pdfs: bool = False,
+    save_hdf5: bool = False,
+    delete_pdf: bool = False,
+    delete_hdf5: bool = False,
 ) -> tuple[list[Path], list["ArxivPaper"]]:
     """
     Searches for a specific number of papers `n_papers` in arXiv for a specified `category` and downloads
-    their metadata in an HDF5 file in `download_path`.
+    their PDFs in `download_path`. Optionally, metadata can be saved to HDF5 files.
 
     If `regex_pattern` is specified, only the papers that contain the pattern will be downloaded.
     If `start_id` is specified, the search will start from that ID.
     If `start_from_filepath` is True, the search will start from the last downloaded paper's ID.
     If `loader` is specified, the text will be extracted using the corresponding loader.
     If `clean_text` is True, the extracted text will be cleaned by removing references and unnecessary whitespaces.
-    If `download_pdfs` is True, the PDFs will be downloaded and saved in `download_path`.
+    If `save_hdf5` is True, the metadata will be saved to HDF5 files in `download_path`.
+    If `delete_pdf` is True, PDFs will be deleted after processing (useful when only HDF5 is needed).
+    If `delete_hdf5` is True, HDF5 files will be deleted after processing (useful when only PDFs are needed).
 
     Args:
-        download_path (Path, optional): The path for downloading the arXiv metadata. Defaults to Path("data").
+        download_path (Path, optional): The path for downloading the arXiv PDFs. Defaults to Path("data").
         category (str, optional): The arXiv category on which the papers will be searched. Defaults to "cond-mat.str-el".
         n_papers (int, optional): The number of arXiv papers to be fetched and downloaded.
             If `regex_pattern` is not specified, this would correspond to the n_papers starting from the newest in the `category`. Defaults to 5.
@@ -69,7 +53,9 @@ def run_search_and_download(
             Defaults to "pdfminer". Available loaders: "pdfminer", "pypdf".
         clean_text (bool, optional): If True, the extracted text will be cleaned by removing references and unnecessary whitespaces.
             Defaults to True.
-        download_pdfs (bool, optional): If True, the PDFs will be downloaded and saved in `download_path`. Defaults to False.
+        save_hdf5 (bool, optional): If True, the metadata will be saved to HDF5 files in `download_path`. Defaults to False.
+        delete_pdf (bool, optional): If True, PDFs will be deleted after processing. Defaults to False.
+        delete_hdf5 (bool, optional): If True, HDF5 files will be deleted after processing. Defaults to False.
 
     Returns:
         tuple[list[Path], list[ArxivPaper]]: A tuple containing a list of Paths to the arXiv papers and a list of ArxivPaper objects
@@ -127,24 +113,28 @@ def run_search_and_download(
                     continue
                 logger.info(
                     f"Paper {paper.id} matches the regex pattern: {regex_pattern}."
-                    " Storing metadata and text in an HDF5 file."
+                    " Keeping PDF file."
                 )
 
                 # If the paper matches the regex_pattern, store text in the corresponding ArxivPaper object
                 paper.text = text
                 paper.pdf_loader = loader
 
-                # Save the paper metadata to an HDF5 file
-                hdf_path = download_path / f"{paper.id}.hdf5"
-                with h5py.File(hdf_path, "a") as h5f:
-                    _ = paper.to_hdf5(hdf_file=h5f)
+                # Optionally save the paper metadata to an HDF5 file
+                hdf_path = None
+                if save_hdf5:
+                    hdf_path = download_path / f"{paper.id}.hdf5"
+                    with h5py.File(hdf_path, "a") as h5f:
+                        _ = paper.to_hdf5(hdf_file=h5f)
 
-                # Deleting the PDF file after storing it in HDF5
-                if not download_pdfs:
+                # Handle optional deletion of files
+                if delete_pdf and pdf_path.exists():
                     pdf_path.unlink()
+                if delete_hdf5 and hdf_path and hdf_path.exists():
+                    hdf_path.unlink()
 
-                # Appending the HDF5 file and paper to the lists
-                pattern_files.append(hdf_path)
+                # Appending the PDF file and paper to the lists
+                pattern_files.append(pdf_path if not delete_pdf else hdf_path)
                 pattern_papers.append(paper)
                 bar.update(1)
 
@@ -169,7 +159,7 @@ def cli():
     default="data",
     required=False,
     help="""
-    (Optional) The path for downloading the arXiv metadata in HDF5 files and, optionally (if set with download-pdfs), the PDFs. Defaults to "data".
+    (Optional) The path for downloading the arXiv PDFs and, optionally (if set with --save-hdf5), the HDF5 metadata files. Defaults to "data".
     """,
 )
 @click.option(
@@ -247,13 +237,33 @@ def cli():
     """,
 )
 @click.option(
-    "--download-pdfs",
+    "--save-hdf5",
+    "-h5",
+    is_flag=True,
+    default=False,
+    required=False,
+    help="""
+    (Optional) If True, the metadata will be saved to HDF5 files in `download_path`. Defaults to False.
+    """,
+)
+@click.option(
+    "--delete-pdf",
     "-dp",
     is_flag=True,
     default=False,
     required=False,
     help="""
-    (Optional) If True, the PDFs will be downloaded and saved in `download_path`. Defaults to False.
+    (Optional) If True, PDFs will be deleted after processing. Useful when only HDF5 metadata is needed. Defaults to False.
+    """,
+)
+@click.option(
+    "--delete-hdf5",
+    "-dh5",
+    is_flag=True,
+    default=False,
+    required=False,
+    help="""
+    (Optional) If True, HDF5 files will be deleted after processing. Useful when only PDFs are needed. Defaults to False.
     """,
 )
 def search_and_download(
@@ -265,7 +275,9 @@ def search_and_download(
     start_from_filepath,
     loader,
     clean_text,
-    download_pdfs,
+    save_hdf5,
+    delete_pdf,
+    delete_hdf5,
 ):
     start_time = time.time()
 
@@ -278,7 +290,9 @@ def search_and_download(
         start_from_filepath=start_from_filepath,
         loader=loader,
         clean_text=clean_text,
-        download_pdfs=download_pdfs,
+        save_hdf5=save_hdf5,
+        delete_pdf=delete_pdf,
+        delete_hdf5=delete_hdf5,
     )
 
     elapsed_time = time.time() - start_time
@@ -302,26 +316,37 @@ def search_and_download(
 def download_pdfs(data_path):
     start_time = time.time()
 
-    # check if `data_path` exists, and if not, returns an error
+    # check if `data_path` exists, and if not, create it
     data_path = Path(data_path)
     if not data_path.exists():
         raise click.ClickException(f"The specified path {data_path} does not exist.")
+
     downloader = ArxivDownloader(download_path=data_path, logger=logger)
 
     # Loops over all HDF5 files in the `data_path` and downloads the corresponding PDFs
+    papers_to_download = []
+    # Use HDF5 files from the data path
     hdf5_files = list(data_path.glob("*.hdf5"))
+    if not hdf5_files:
+        raise click.ClickException(f"No HDF5 files found in {data_path}.")
+
+    for file in hdf5_files:
+        try:
+            paper = ArxivPaper.from_hdf5(file=file)
+            papers_to_download.append((str(file), paper))
+        except Exception as e:
+            logger.error(f"Failed to load HDF5 file {file}: {e}")
 
     failed_downloads = []
     with click.progressbar(
-        length=len(hdf5_files), label="Downloading papers PDFs"
+        length=len(papers_to_download), label="Downloading PDFs from HDF5 files"
     ) as bar:
-        for file in hdf5_files:
-            paper = ArxivPaper.from_hdf5(file=file)
+        for identifier, paper in papers_to_download:
             try:
                 _ = downloader.download_pdf(arxiv_paper=paper)
             except Exception as e:
-                failed_downloads.append(str(file))
-                logger.error(f"Failed to download PDF for {file}: {e}")
+                failed_downloads.append(identifier)
+                logger.error(f"Failed to download PDF for {identifier}: {e}")
             bar.update(1)
 
     elapsed_time = time.time() - start_time
