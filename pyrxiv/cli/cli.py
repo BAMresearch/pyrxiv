@@ -301,7 +301,7 @@ def search_and_download(
 
 @cli.command(
     name="download_pdfs",
-    help="Downloads PDFs from arXiv IDs or from HDF5 files in a specified path.",
+    help="Downloads the PDFs of the arXiv papers stored in HDF5 files in a specified path.",
 )
 @click.option(
     "--data-path",
@@ -310,7 +310,7 @@ def search_and_download(
     default="data",
     required=False,
     help="""
-    (Optional) The path where the HDF5 files with the arXiv papers metadata exist. Defaults to "data".
+    (Optional) The path where the HDF5 files with the arXiv papers metadata exist. The downloaded PDFs will be stored in there as well. Defaults to "data".
     """,
 )
 def download_pdfs(data_path):
@@ -318,10 +318,12 @@ def download_pdfs(data_path):
 
     # check if `data_path` exists, and if not, create it
     data_path = Path(data_path)
-    data_path.mkdir(parents=True, exist_ok=True)
+    if not data_path.exists():
+        raise click.ClickException(f"The specified path {data_path} does not exist.")
 
     downloader = ArxivDownloader(download_path=data_path, logger=logger)
 
+    # Loops over all HDF5 files in the `data_path` and downloads the corresponding PDFs
     papers_to_download = []
     # Use HDF5 files from the data path
     hdf5_files = list(data_path.glob("*.hdf5"))
@@ -351,6 +353,6 @@ def download_pdfs(data_path):
     click.echo(f"Downloaded arXiv papers in {elapsed_time:.2f} seconds\n\n")
 
     if failed_downloads:
-        click.echo("\nFailed to download PDFs for the following:")
-        for failed_item in failed_downloads:
-            click.echo(f"  - {failed_item}")
+        click.echo("\nFailed to download PDFs for the following files:")
+        for failed_file in failed_downloads:
+            click.echo(f"  - {failed_file}")
