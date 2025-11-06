@@ -14,6 +14,7 @@ This guide explains how to use the **pyrxiv** command-line interface (CLI) to se
 - [Command 2: download_pdfs](#command-2-download_pdfs)
 - [Complete Pipeline Examples](#complete-pipeline-examples)
 - [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
 
 ## Installation
 
@@ -103,7 +104,7 @@ If you only need PDFs and want to clean up metadata files:
 pyrxiv search_and_download --category cond-mat.str-el --n-papers 5 --save-hdf5 --delete-hdf5
 ```
 
-Note: You must use `--save-hdf5` even if you're deleting HDF5 files, as the files need to be created first before deletion.
+**Note**: You must use `--save-hdf5` even if you're deleting HDF5 files, as the files need to be created first before deletion.
 
 #### Resuming from a Specific Paper
 
