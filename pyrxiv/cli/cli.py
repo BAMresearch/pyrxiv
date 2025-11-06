@@ -13,26 +13,6 @@ from pyrxiv.fetch import ArxivFetcher
 from pyrxiv.logger import logger
 
 
-def save_paper_to_hdf5(paper: "ArxivPaper", pdf_path: Path, hdf_path: Path) -> None:
-    """
-    Saves the arXiv paper metadata to an HDF5 file.
-
-    Args:
-        paper (ArxivPaper): The arXiv paper object containing metadata.
-        pdf_path (Path): The path to the PDF file of the arXiv paper.
-        hdf_path (Path): The path to the HDF5 file where the metadata will be saved.
-    """
-    with h5py.File(hdf_path, "a") as h5f:
-        group = paper.to_hdf5(hdf_file=h5f)
-        # Store PDF in the HDF5 file
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
-        # overwrite existing dataset
-        if "pdf" in group:
-            del group["pdf"]
-        group.create_dataset("pdf", data=np.void(pdf_bytes))
-
-
 def run_search_and_download(
     download_path: Path = Path("data"),
     category: str = "cond-mat.str-el",
@@ -330,74 +310,34 @@ def search_and_download(
     default="data",
     required=False,
     help="""
-    (Optional) The path where the HDF5 files with the arXiv papers metadata exist, or where PDFs will be downloaded when using --arxiv-ids. Defaults to "data".
+    (Optional) The path where the HDF5 files with the arXiv papers metadata exist. Defaults to "data".
     """,
 )
-@click.option(
-    "--arxiv-ids",
-    "-ids",
-    type=str,
-    required=False,
-    help="""
-    (Optional) Comma-separated list of arXiv IDs to download PDFs for (e.g., "2301.00001,2301.00002"). If provided, HDF5 files will be ignored.
-    """,
-)
-def download_pdfs(data_path, arxiv_ids):
+def download_pdfs(data_path):
     start_time = time.time()
 
     # check if `data_path` exists, and if not, create it
     data_path = Path(data_path)
     data_path.mkdir(parents=True, exist_ok=True)
-    
+
     downloader = ArxivDownloader(download_path=data_path, logger=logger)
 
     papers_to_download = []
-    
-    if arxiv_ids:
-        # Parse comma-separated arXiv IDs
-        arxiv_id_list = [id.strip() for id in arxiv_ids.split(",") if id.strip()]
-        if not arxiv_id_list:
-            raise click.ClickException("No valid arXiv IDs provided.")
-        
-        # Create ArxivPaper objects from the IDs
-        for arxiv_id in arxiv_id_list:
-            # Create a minimal ArxivPaper object with just the ID
-            paper = ArxivPaper(
-                id=arxiv_id,
-                url=f"http://arxiv.org/abs/{arxiv_id}",
-                pdf_url=f"http://arxiv.org/pdf/{arxiv_id}",
-                updated=None,
-                published=None,
-                title="",
-                summary="",
-                authors=[],
-            )
-            papers_to_download.append((arxiv_id, paper))
-        
-        label = "Downloading PDFs from arXiv IDs"
-    elif data_path.exists():
-        # Use HDF5 files from the data path
-        hdf5_files = list(data_path.glob("*.hdf5"))
-        if not hdf5_files:
-            raise click.ClickException(f"No HDF5 files found in {data_path}.")
-        
-        for file in hdf5_files:
-            try:
-                paper = ArxivPaper.from_hdf5(file=file)
-                papers_to_download.append((str(file), paper))
-            except Exception as e:
-                logger.error(f"Failed to load HDF5 file {file}: {e}")
-        
-        label = "Downloading PDFs from HDF5 files"
-    else:
-        raise click.ClickException(
-            f"No arXiv IDs provided and data path {data_path} does not exist. "
-            "Please provide --arxiv-ids or ensure --data-path points to a valid directory with HDF5 files."
-        )
+    # Use HDF5 files from the data path
+    hdf5_files = list(data_path.glob("*.hdf5"))
+    if not hdf5_files:
+        raise click.ClickException(f"No HDF5 files found in {data_path}.")
+
+    for file in hdf5_files:
+        try:
+            paper = ArxivPaper.from_hdf5(file=file)
+            papers_to_download.append((str(file), paper))
+        except Exception as e:
+            logger.error(f"Failed to load HDF5 file {file}: {e}")
 
     failed_downloads = []
     with click.progressbar(
-        length=len(papers_to_download), label=label
+        length=len(papers_to_download), label="Downloading PDFs from HDF5 files"
     ) as bar:
         for identifier, paper in papers_to_download:
             try:

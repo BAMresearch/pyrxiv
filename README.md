@@ -20,7 +20,7 @@ pip install pyrxiv
 ```
 
 ## Objective
-**pyrxiv** main objective is to provide an easy command line interface (CLI) to search and download arXiv papers which contain a specific content string matched against a regex pattern. By default, PDFs are downloaded. You can optionally save metadata to HDF5 files. You can use the CLI and print the options after installing the package using:
+**pyrxiv** main objective is to provide an easy command line interface (CLI) to search and download arXiv papers which contain a specific content string matched against a regex pattern. By default, the arXiv PDFs are downloaded. You can optionally save metadata to HDF5 files. You can use the CLI and print the options after installing the package using:
 ```bash
 pyrxiv --help
 ```
