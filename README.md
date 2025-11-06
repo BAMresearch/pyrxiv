@@ -44,7 +44,7 @@ pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubb
 
 ## Documentation
 
-For a comprehensive guide on how to use the CLI and recommended pipelines, see the [How to Use pyrxiv](docs/how_to_use_pyrxiv.md) documentation.
+For a comprehensive guide on how to use the CLI and recommended pipelines, see the [How to Use `pyrxiv`](docs/how_to_use_pyrxiv.md) documentation.
 
 ---
 
