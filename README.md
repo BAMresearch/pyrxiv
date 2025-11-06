@@ -20,7 +20,7 @@ pip install pyrxiv
 ```
 
 ## Objective
-**pyrxiv** main objective is to provide an easy command line interface (CLI) to search and download arXiv papers which contain a specific content string matched against a regex pattern. You can use the CLI and print the options after installing the package using:
+**pyrxiv** main objective is to provide an easy command line interface (CLI) to search and download arXiv papers which contain a specific content string matched against a regex pattern. By default, PDFs are downloaded. You can optionally save metadata to HDF5 files. You can use the CLI and print the options after installing the package using:
 ```bash
 pyrxiv --help
 ```
@@ -30,10 +30,17 @@ or directly:
 pyrxiv search_and_download --help
 ```
 
-For example:
+For example, to download PDFs:
 ```bash
-pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubbard" --n-papers 5 --download-pdfs True
+pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubbard" --n-papers 5
 ```
+
+Or to also save metadata to HDF5 files:
+```bash
+pyrxiv search_and_download --category cond-mat.str-el --regex-pattern "DMFT|Hubbard" --n-papers 5 --save-hdf5
+```
+
+**Note**: When using `--regex-pattern`, the tool will continue fetching papers from arXiv until it finds the specified number of papers (`--n-papers`) that match the pattern. Papers that don't match the regex are automatically discarded.
 
 ---
 
