@@ -305,8 +305,15 @@ class ArxivFetcher:
                     ]
 
                 # Extracting pages and figures from the comment
-                comment = new_paper.get("arxiv:comment", {}).get("#text", "")
-                n_pages, n_figures = self._get_pages_and_figures(comment=comment)
+                comment = ""
+                n_pages, n_figures = None, None
+                try:
+                    comment = new_paper.get("arxiv:comment", {}).get("#text", "")
+                    n_pages, n_figures = self._get_pages_and_figures(comment=comment)
+                except Exception:
+                    self.logger.info(
+                        f"Could not extract comment or number of pages and figures for paper {arxiv_id}."
+                    )
 
                 # Storing the ArxivPaper object in the list
                 papers.append(
