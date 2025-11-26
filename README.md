@@ -5,6 +5,7 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![PyPI version](https://img.shields.io/pypi/v/pyrxiv.svg)
 ![Python versions](https://img.shields.io/pypi/pyversions/pyrxiv.svg)
+[![DOI](https://zenodo.org/badge/1018131027.svg)](https://doi.org/10.5281/zenodo.17727532)
 
 </h4>
 

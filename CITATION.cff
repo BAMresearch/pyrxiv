@@ -1,0 +1,36 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: pyrxiv
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: José M.
+    family-names: Pizarro
+    email: jose.pizarro-blanco@bam.de
+    affiliation: >-
+      Federal Institute for Materials Research and Testing
+      (BAM)
+    orcid: 'https://orcid.org/0000-0002-6751-8192'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.17727533
+    description: zenodo
+repository-code: 'https://github.com/JosePizarro3/pyrxiv'
+url: 'https://github.com/JosePizarro3/pyrxiv'
+abstract: >-
+  pyrxiv is a Python package for retrieving arXiv papers,
+  storing their metadata in pydantic-like classes, and
+  optionally filtering some of them out based on the
+  specific content of the papers (matching a regex
+  pattern). While originally developed for the Strongly
+  Correlated Electron Systems community in Condensed
+  Matter Physics (cond-mat.str-el), it's designed to be
+  flexible and applicable to any arXiv category.
+keywords:
+  - arxiv
+  - analysis
+license: MIT
